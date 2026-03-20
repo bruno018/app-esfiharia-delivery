@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ShoppingBag, Search, X, Plus, Minus, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, X, Plus, Minus, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { toast } from 'sonner';
 

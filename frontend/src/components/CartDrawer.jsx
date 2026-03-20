@@ -2,7 +2,7 @@ import { X, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 export default function CartDrawer({ open, onClose, onCheckout }) {
-  const { items, updateQuantity, removeItem, total, itemCount } = useCart();
+  const { items, updateQuantity, total, itemCount } = useCart();
 
   const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
