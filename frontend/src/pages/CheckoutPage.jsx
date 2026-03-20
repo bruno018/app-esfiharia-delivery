@@ -7,11 +7,12 @@ import { toast } from 'sonner';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
-const PIX_KEY = 'seu-email@email.com'; // Substitua pela sua chave PIX
+const PIX_KEY = 'seu-email@email.com';
+const WHATSAPP_NUMBER = '5516997882339';
 
 export default function CheckoutPage({ onBack }) {
   const { items, total, clearCart } = useCart();
-  const [step, setStep] = useState(1); // 1: dados, 2: pagamento, 3: confirmação
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [orderId, setOrderId] = useState(null);
 
@@ -35,6 +36,34 @@ export default function CheckoutPage({ onBack }) {
     return true;
   };
 
+  const sendWhatsApp = (orderIdParam) => {
+    const itemsList = items.map(item =>
+      `▪ ${item.quantity}x ${item.name} - ${fmt(item.price * item.quantity)}`
+    ).join('\n');
+
+    const deliveryInfo = form.delivery_type === 'delivery'
+      ? `🛵 *Entrega*\n📍 Endereço: ${form.address}`
+      : `🏪 *Retirada no local*`;
+
+    const paymentInfo = form.payment_method === 'pix'
+      ? `💰 PIX`
+      : `💳 Cartão na entrega/retirada`;
+
+    const notesInfo = form.notes ? `\n📝 Obs: ${form.notes}` : '';
+
+    const message = `🍕 *NOVO PEDIDO - Esfiharia Aguirra*\n\n` +
+      `📋 *Pedido:* #${orderIdParam}\n` +
+      `👤 *Cliente:* ${form.customer_name}\n` +
+      `📱 *WhatsApp:* ${form.customer_phone}\n\n` +
+      `🛒 *Itens:*\n${itemsList}\n\n` +
+      `💵 *Total: ${fmt(total)}*\n\n` +
+      `${deliveryInfo}${notesInfo}\n\n` +
+      `💳 *Pagamento:* ${paymentInfo}`;
+
+    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
+
   const submitOrder = async () => {
     setLoading(true);
     try {
@@ -43,9 +72,11 @@ export default function CheckoutPage({ onBack }) {
         items,
         total,
       });
-      setOrderId(response.data.order_id);
+      const newOrderId = response.data.order_id;
+      setOrderId(newOrderId);
       clearCart();
       setStep(3);
+      setTimeout(() => sendWhatsApp(newOrderId), 1000);
     } catch {
       toast.error('Erro ao enviar pedido. Tente novamente.');
     } finally {
@@ -58,7 +89,6 @@ export default function CheckoutPage({ onBack }) {
     toast.success('Chave PIX copiada!');
   };
 
-  // ── Step 3: Confirmação ──────────────────────────────────────
   if (step === 3) {
     return (
       <div className="min-h-screen bg-stone-950 flex items-center justify-center px-4">
@@ -68,10 +98,11 @@ export default function CheckoutPage({ onBack }) {
           </div>
           <h2 className="text-3xl text-white font-bold mb-2">PEDIDO ENVIADO!</h2>
           <p className="text-stone-400 mb-1">Obrigado, {form.customer_name}!</p>
-          <p className="text-orange-500 font-bold text-xl mb-6">#{orderId}</p>
+          <p className="text-orange-500 font-bold text-xl mb-2">#{orderId}</p>
+          <p className="text-stone-400 text-sm mb-6">O WhatsApp foi aberto com os detalhes do pedido.</p>
 
           {form.payment_method === 'pix' && (
-            <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 mb-6 text-left">
+            <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 mb-4 text-left">
               <div className="flex items-center gap-2 mb-3">
                 <QrCode className="w-5 h-5 text-orange-400" />
                 <h3 className="text-white font-bold">Pague via PIX</h3>
@@ -88,13 +119,12 @@ export default function CheckoutPage({ onBack }) {
             </div>
           )}
 
-          {form.payment_method === 'card' && (
-            <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 mb-6">
-              <CreditCard className="w-8 h-8 text-orange-400 mx-auto mb-3" />
-              <p className="text-stone-300 text-sm">O pagamento será realizado na entrega ou retirada.</p>
-              {/* Integração Mercado Pago será adicionada aqui */}
-            </div>
-          )}
+          <button
+            onClick={() => sendWhatsApp(orderId)}
+            className="w-full bg-green-600 hover:bg-green-500 text-white py-4 rounded-xl font-bold transition-colors mb-3"
+          >
+            📱 Reenviar pelo WhatsApp
+          </button>
 
           <button
             onClick={onBack}
@@ -111,7 +141,6 @@ export default function CheckoutPage({ onBack }) {
     <div className="min-h-screen bg-stone-950">
       <div className="max-w-2xl mx-auto px-4 py-6">
 
-        {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <button onClick={onBack} className="text-stone-400 hover:text-white transition-colors">
             <ArrowLeft className="w-6 h-6" />
@@ -119,7 +148,6 @@ export default function CheckoutPage({ onBack }) {
           <h1 className="text-white text-2xl font-bold">Finalizar Pedido</h1>
         </div>
 
-        {/* Progress */}
         <div className="flex items-center gap-2 mb-8">
           {['Seus dados', 'Pagamento'].map((label, i) => (
             <div key={i} className="flex items-center gap-2 flex-1">
@@ -134,12 +162,10 @@ export default function CheckoutPage({ onBack }) {
           ))}
         </div>
 
-        {/* Step 1: Dados */}
         {step === 1 && (
           <div className="space-y-4">
             <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 space-y-4">
               <h2 className="text-white font-bold text-lg">Seus dados</h2>
-
               <div>
                 <label className="text-stone-400 text-sm block mb-1">Nome completo</label>
                 <input
@@ -149,7 +175,6 @@ export default function CheckoutPage({ onBack }) {
                   className="w-full bg-stone-800 border border-stone-700 rounded-xl px-4 py-3 text-white placeholder-stone-500 focus:outline-none focus:border-orange-600 transition-colors"
                 />
               </div>
-
               <div>
                 <label className="text-stone-400 text-sm block mb-1">WhatsApp</label>
                 <input
@@ -161,7 +186,6 @@ export default function CheckoutPage({ onBack }) {
               </div>
             </div>
 
-            {/* Tipo de entrega */}
             <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 space-y-4">
               <h2 className="text-white font-bold text-lg">Como deseja receber?</h2>
               <div className="grid grid-cols-2 gap-3">
@@ -209,7 +233,6 @@ export default function CheckoutPage({ onBack }) {
               </div>
             </div>
 
-            {/* Resumo */}
             <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6">
               <h2 className="text-white font-bold text-lg mb-3">Resumo</h2>
               <div className="space-y-2 mb-4">
@@ -235,7 +258,6 @@ export default function CheckoutPage({ onBack }) {
           </div>
         )}
 
-        {/* Step 2: Pagamento */}
         {step === 2 && (
           <div className="space-y-4">
             <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 space-y-4">
